@@ -43,6 +43,37 @@ public class Lines extends JPanel {
             plot(g, x, y, size, c);
         }
     }
+    /*public void bresenhamLine(Graphics g, int x1, int y1, int x2, int y2, int size, Color c)
+    {
+        double dx = Math.abs(x2 - x1);
+        double dy = Math.abs(y2 - y1);
+        double sx = (x1 < x2) ? 1 : -1;
+        double sy = (y1 < y2) ? 1 : -1;
+        isSwap = false;
+
+        if(dy > dx)
+        {
+            Swap(dx, dy);
+            isSwap = true;
+        }
+        D = 2 * dy - dx;
+
+        for(i = 1 to dx) {
+            plot(x, y);
+
+            if (D >= 0)
+            {
+                if (isSwap) x += sx;
+                else y += sy;
+
+                D -= 2 * dx;
+            }
+            if (swap) y += sy;
+            else x += sx;
+
+            D += 2 * dy;
+        }
+    }*/
 
     public void ddaLine (Graphics g, int x1, int y1, int x2, int y2, int size, Color c)
     {
@@ -89,4 +120,17 @@ public class Lines extends JPanel {
             }
         }
     }
+
+    public void bezier (Graphics g, int x1, int y1, int x2, int y2, int x3, int y3, int x4, int y4, int size, Color c)
+    {
+        for (int i = 0; i <= 1000; i++)
+        {
+            double t = i / 1000.0;
+            int x = (int)(Math.pow((1 - t), 3)*x1 + 3*t*Math.pow((1-t), 2)*x2 + 3*t*t*(1-t)*x3 + t*t*t*x4);
+            int y = (int)(Math.pow((1 - t), 3)*y1 + 3*t*Math.pow((1-t), 2)*y2 + 3*t*t*(1-t)*y3 + t*t*t*y4);
+     
+            plot(g, x, y, size, c);
+        }
+    }
+    
 }
