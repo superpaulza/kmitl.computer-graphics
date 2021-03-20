@@ -31,10 +31,10 @@ int Window::initialise()
     //Setup GLFW window properties
     //OpenGL version (using 3.1)
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 
     //Core Profile = No Backwards Compatibility
-    glfwWindowHint(GLFW_OPENGL_ANY_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     //Allow forward compatibility
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 
@@ -44,7 +44,7 @@ int Window::initialise()
     {
         printf("GLFW window creation failed!");
         glfwTerminate();
-        return 1;
+        return 2;
     }
 
     //Get Buffer size information
@@ -61,10 +61,8 @@ int Window::initialise()
         printf("GLEW initialisation failed!");
         glfwDestroyWindow(mainWindow);
         glfwTerminate();
-        return 1;
+        return 3;
     }
-
-    glEnable(GL_DEPTH_TEST);
 
     //Setup Viewport size
     glViewport(0, 0, bufferWidth, bufferHeight);

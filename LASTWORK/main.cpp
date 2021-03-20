@@ -1,20 +1,19 @@
 #undef GLFW_DLL
-#include <iostream>
 #include <stdio.h>
+#include <iostream>
 #include <string.h>
 #include <cmath>
 #include <vector>
 
-#include <ctime>
-#include <chrono>
-#include <thread>
-
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
-
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+
+#include <ctime>
+#include <chrono>
+#include <thread>
 
 #include "Shader.h"
 #include "Window.h"
@@ -29,13 +28,9 @@ const GLint WIDTH = 800, HEIGHT = 600;
 const float toRadians = 3.14159265f / 180.0f;
 
 Window mainWindow;
-std::vector<Mesh*> meshList;
 std::vector<Shader> shaderList;
 
-GLuint VAO, VBO, IBO, LME, CME;
-float triOffset = 0.0f, triIncrement = 1.0f, triMaxOffset = 1.5f;
-int secondDirection = 0;
-float secondOffset = 0.0f;
+GLuint uniformModel, uniformProjection, uniformColour;
 
 //Vertex Shader
 static const char* vShader = "Shaders/shader.vert";
@@ -57,27 +52,8 @@ GLuint VRa, VRv, VRi, VRiU, VRiO; // Vegetable random design
 GLuint BTa, BTv, BTiU, BTiT; // Bread Top Hat
 GLuint DBa, DBv, DSa, DSv, cDS; // Details of Objects
 int cDSi[125];
+
 void ItemModel() {
-    GLfloat vertices[] =
-    {
-        -1.0f, -1.0f, 0.0f,
-        0.0f, -1.0f, 1.0f,
-        1.0f, -1.0f, 0.0f,
-        0.0f, 1.0f, 0.0f,
-    };
-
-    unsigned int indices[] = 
-    {
-        0, 3, 1,
-        1, 3, 2,
-        2, 3, 0,
-        0, 1, 2
-    };
-
-    Mesh *obj1 = new Mesh();
-    obj1->CreateMesh(vertices, indices, 12, 12);
-    meshList.push_back(obj1);
-
 	// First Calculate
 	int quality = 20;
 	float curve_x[20];
@@ -458,28 +434,26 @@ void CreateShaders()
     shader1->CreateFromFiles(vShader, fShader);
     shaderList.push_back(*shader1);
 }
+int main() {
 
-int main()
-{
-    //Setup
-    mainWindow = Window(WIDTH, HEIGHT);
+	mainWindow = Window(WIDTH, HEIGHT);
     mainWindow.initialise();
 
-    ItemModel();
-    CreateShaders();
+	//ADD item
+	ItemModel();
+	CreateShaders();
 
-	// Time setting
+	glm::vec4 color;
+	glm::mat4 projection = glm::perspective(45.0f, (GLfloat)mainWindow.getBufferWidth() / (GLfloat)mainWindow.getBufferHeight(), 0.1f, 100.0f);
+
+	//// Time setting
 	auto currentTime = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
 	long lastTime = currentTime;
 	long elapsedTime;
 
-    GLuint uniformModel = 0, uniformProjection = 0, uniformColour = 0;
-    glm::vec4 colour;
-    glm::mat4 projection = glm::perspective(45.0f, (GLfloat)mainWindow.getBufferWidth() / (GLfloat)mainWindow.getBufferHeight(), 0.1f, 100.0f);
-
 	glm::vec4 cBurger, cVegetable, cMeat, cCheese, cHam, cBlack, cWhite, cBurgerIn, cMeatIn, cHamIn, cVegetableIn , 
 		cSeedClosetMix, cSeedMasterMix, cSeedMacaroonCream;
-	colour = glm::vec4(1.0f, 0.5f, 0.15f, 1.0f);
+	color = glm::vec4(1.0f, 0.5f, 0.15f, 1.0f);
 
 	cBurger		= glm::vec4(0.87f, 0.63f, 0.22f, 1.0f);
 	cVegetable	= glm::vec4(0.39f, 0.71f, 0.13f, 1.0f);
@@ -499,94 +473,154 @@ int main()
 	cSeedMasterMix		= glm::vec4(0.93f, 0.93f, 0.92f, 1.0f);
 	cSeedMacaroonCream	= glm::vec4(0.95f, 0.85f, 0.70f, 1.0f);
 
-    // Create operate variable
+
+
+	// Create operate variable
 	float rotater = 0.0f;
 	float subAnimate;
 	int subSelect;
 	float setScale = 1.0f ,resScale;
 
-    //Loop until window closed
-    while (!mainWindow.getShouldClose())
-    {
-        //Animation Timing
-		//rotater += 0.03f;
+	//Loop until window closed
+	while (!mainWindow.getShouldClose()) {
 
-		//if (rotater > 65.0f) rotater = -65.0f;
 		if (rotater > 360.0f) rotater = 0.0f;
 		//Time processing
 		currentTime = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
 		elapsedTime = currentTime - lastTime;
 		lastTime = currentTime;
-        //
 
-        //Get + Handle user input events
-        glfwPollEvents();
-        Update(elapsedTime);
+		// Get + Handle user input events
+		glfwPollEvents();
+		Update(elapsedTime);
 
-        //Clear window
-        glClearColor(0.7f, 1.0f, 0.45f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		glClearColor(0.7f, 1.0f, 0.45f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        //draw here
         shaderList[0].UseShader();
         uniformModel = shaderList[0].GetModelLocation();
         uniformProjection = shaderList[0].GetProjectionLocation();
         uniformColour = shaderList[0].GetColourLocation();
 
-
-		//Build Model
+		subSelect = (int)animation_time;
+		subAnimate = animation_time - subSelect;
+		resScale = setScale * (1 - subAnimate);
 		glm::mat4 model(1.0f);
+		if(subSelect < 9)
+			model = glm::scale(model, glm::vec3(setScale, setScale, 1.0f));
+		else
+			model = glm::scale(model, glm::vec3(resScale, resScale, 1.0f));
+
+		glm::mat4 modelDrop(1.0f);
+		modelDrop = glm::translate(model, glm::vec3(0.0f, 2.0f*(1-subAnimate) -0.5f, -2.5f));
+		modelDrop = glm::rotate(modelDrop, rotater * toRadians, glm::vec3(0.0f, 1.0f, 0.0f));
 
 		model = glm::translate(model, glm::vec3(0.0f, -0.5f, -2.5f));
-		//model = glm::rotate(model, 30 * toRadians, glm::vec3(0.0f, 1.0f, 0.0f));
+		model = glm::rotate(model, rotater * toRadians, glm::vec3(0.0f, 1.0f, 0.0f));
 
 		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
 		glUniformMatrix4fv(uniformProjection, 1, GL_FALSE, glm::value_ptr(projection));
 		glUniform4fv(uniformColour, 1, glm::value_ptr(cBlack));
 
+		if (animation_time > 1.0f)	{
+			glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr((subSelect == 1) ? modelDrop: model));
+			
+			glBindVertexArray(BGa);
+			glUniform4fv(uniformColour, 1, glm::value_ptr(cBurger));
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, BGiU);
+			glDrawElements(GL_TRIANGLE_FAN, 20, GL_UNSIGNED_INT, 0);
+			glUniform4fv(uniformColour, 1, glm::value_ptr(cBurgerIn));
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, BGiO);
+			glDrawElements(GL_TRIANGLE_FAN, 40, GL_UNSIGNED_INT, 0);
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+			glBindVertexArray(0);
+		}
+		
+		if (animation_time > 2.0f) {
+			glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr((subSelect == 2) ? modelDrop : model));
 
-        //Object 1
-		/*glm::mat4 model(1.0f);
-		model = glm::translate(model, glm::vec3(0.0f, -0.5f, -2.5f));
+			glBindVertexArray(MOa);
+			glUniform4fv(uniformColour, 1, glm::value_ptr(cMeat));
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, MOiO);
+			glDrawElements(GL_TRIANGLE_STRIP, 40, GL_UNSIGNED_INT, 0);
+			glUniform4fv(uniformColour, 1, glm::value_ptr(cMeatIn));
+			glDrawElements(GL_LINES_ADJACENCY, 40, GL_UNSIGNED_INT, 0);
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, MOiU);
+			glDrawElements(GL_TRIANGLE_STRIP, 40, GL_UNSIGNED_INT, 0);
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+			glBindVertexArray(0);
+		}
 
-		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
-		glUniformMatrix4fv(uniformProjection, 1, GL_FALSE, glm::value_ptr(projection));
-        glUniform4fv(uniformColour, 1, glm::value_ptr(colour));
+		if (animation_time > 3.0f) {
+			glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr((subSelect == 3) ? modelDrop : model));
 
-		glBindVertexArray(BGa);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, BGiU);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, BGiO);
-        glDrawElements(GL_TRIANGLE_FAN, 40, GL_UNSIGNED_INT, 0);
+			glBindVertexArray(CPa);
+			glUniform4fv(uniformColour, 1, glm::value_ptr(cCheese));
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, CPi);
+			glDrawElements(GL_TRIANGLE_STRIP, 32, GL_UNSIGNED_INT, 0);
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+			glBindVertexArray(0);
+		}
 
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-		glBindVertexArray(0);
+		if (animation_time > 4.0f) {
+			glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr((subSelect == 4) ? modelDrop : model));
 
-		glm::mat4 model(1.0f);
-		model = glm::translate(model, glm::vec3(0.0f, -0.5f, -2.5f));
+			glBindVertexArray(MPa);
+			glUniform4fv(uniformColour, 1, glm::value_ptr(cHam));
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, MPi);
+			glDrawElements(GL_TRIANGLE_STRIP, 40, GL_UNSIGNED_INT, 0);
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+			glBindVertexArray(0);
 
-		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
-		glUniformMatrix4fv(uniformProjection, 1, GL_FALSE, glm::value_ptr(projection));
-        glUniform4fv(uniformColour, 1, glm::value_ptr(colour));
-        meshList[0]->RenderMesh()
+			glBindVertexArray(DBa);
+			glUniform4fv(uniformColour, 1, glm::value_ptr(cHamIn));
+			glDrawArrays(GL_TRIANGLE_STRIP, 0,40);
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+			glBindVertexArray(0);
+		}
 
-        //Object 1
+		if (animation_time > 5.0f) {
+			glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr((subSelect == 5) ? modelDrop : model));
 
-        //Object 2
-        model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(-triOffset, 1.0f, -5.5f));
-        model = glm::scale(model, glm::vec3(0.4f, 0.4f, 1.0f));
-        //model = glm::scale(model, glm::vec3(0.025f, 0.025f, 1.0f));
-        colour = glm::vec4(1,1,1,1);
-        glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
-        glUniformMatrix4fv(uniformProjection, 1, GL_FALSE, glm::value_ptr(projection));
-        glUniform4fv(uniformColour, 1, glm::value_ptr(colour));
-        meshList[1]->RenderMesh();*/
-        
-        glUseProgram(0);
-        //end draw
+			glBindVertexArray(VRa);
+			glUniform4fv(uniformColour, 1, glm::value_ptr(cVegetable));
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, VRiU);
+			glDrawElements(GL_TRIANGLE_STRIP, 40, GL_UNSIGNED_INT, 0);
+			glUniform4fv(uniformColour, 1, glm::value_ptr(cVegetableIn));
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, VRiO);
+			glDrawElements(GL_TRIANGLE_STRIP, 40, GL_UNSIGNED_INT, 0);
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+			glBindVertexArray(0);
+		}
 
-        mainWindow.swapBuffers();
-    }
+		if (animation_time > 6.0f) {
+			glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr((subSelect == 6) ? modelDrop : model));
 
-    return 0;
+			glBindVertexArray(BTa);
+			glUniform4fv(uniformColour, 1, glm::value_ptr(cBurger));
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, BTiT);
+			glDrawElements(GL_TRIANGLE_STRIP, 40, GL_UNSIGNED_INT, 0);
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+			glBindVertexArray(0);
+
+			glBindVertexArray(DSa);
+			glUniform4fv(uniformColour, 1, glm::value_ptr(cWhite));
+			for (int i = 0,j = 0; i < 1000; i += 8 ,j++) {
+				glUniform4fv(uniformColour, 1, glm::value_ptr( cDSi[j] == 0 ? cSeedClosetMix : cDSi[j] == 1 ? cSeedMasterMix : cSeedMacaroonCream));
+				glDrawArrays(GL_TRIANGLE_STRIP,i,8);
+			}
+			glBindVertexArray(0);
+
+		}
+
+		if (animation_time > 10.0f) {
+			animation_time = 0.0f;
+		}
+		
+		glUseProgram(0);
+
+		mainWindow.swapBuffers();
+	}
+
+	return 0;
 }
